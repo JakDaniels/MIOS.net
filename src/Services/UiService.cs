@@ -1,5 +1,6 @@
 using System.Drawing;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using PhotinoNET;
 
 namespace MIOS.net.Services
@@ -41,9 +42,9 @@ namespace MIOS.net.Services
 
         private void UIThreadStart()
         {
-            bool exitServerOnUiClose = _configuration.GetValue<bool>("exit", true);
-            int listenPort = _configuration.GetValue<int>("port", 5000);
-            bool allowDebugConsole = _configuration.GetValue<bool>("debug", false);
+            bool exitServerOnUiClose    = _configuration.GetValue<bool>("exit", true);
+            int listenPort              = _configuration.GetValue<int>("port", 5000);
+            bool allowDebugConsole      = _configuration.GetValue<bool>("debug", false);
 
             Console.ForegroundColor = ConsoleColor.Green;
             Console.WriteLine("Starting UI on port " + listenPort.ToString());
@@ -54,7 +55,7 @@ namespace MIOS.net.Services
                 .SetSize(new Size(1000,800))
                 .Center()
                 .SetDevToolsEnabled(allowDebugConsole)
-                .Load(new Uri("http://localhost:" + listenPort.ToString() + "/home/"));
+                .Load(new Uri("http://localhost:" + listenPort.ToString() + "/"));
 
             window.WaitForClose();
             if(exitServerOnUiClose) _applicationLifetime.StopApplication();

@@ -1,3 +1,4 @@
+using System.Net.Http;
 using Microsoft.AspNetCore.Builder;
 using MIOS.net.Services;
 
@@ -27,6 +28,8 @@ namespace MIOS.net{
                 services.AddHostedService<ConsumeScopedServiceHostedService>();
                 services.AddScoped<IUiService, UiService>();
             }
+
+            services.AddHttpClient();
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
@@ -43,7 +46,7 @@ namespace MIOS.net{
             {
                 endpoints.MapControllerRoute(
                     name: "default",
-                    pattern: "{controller=Ui}/{action=Index}/{id?}");
+                    pattern: "{controller=Home}/{action=Index}/{id?}");
                 endpoints.MapRazorPages();
             });
         }
