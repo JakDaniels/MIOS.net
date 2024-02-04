@@ -1,0 +1,3 @@
+[submodule "opensim"]
+	path = opensim
+	url = https://github.com/opensim/opensim.git

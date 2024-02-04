@@ -1,5 +1,6 @@
 using System.Net.Http;
 using Microsoft.AspNetCore.Builder;
+using MIOS.net.Interfaces;
 using MIOS.net.Services;
 
 
@@ -30,6 +31,8 @@ namespace MIOS.net{
             }
 
             services.AddHttpClient();
+            
+            services.AddScoped<IIniService, IniService>();
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
