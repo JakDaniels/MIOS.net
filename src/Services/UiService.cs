@@ -44,7 +44,7 @@ namespace MIOS.net.Services
         {
             bool exitServerOnUiClose    = _configuration.GetValue<bool>("exit", true);
             int listenPort              = _configuration.GetValue<int>("port", 5000);
-            bool allowDebugConsole      = _configuration.GetValue<bool>("debug", false);
+            bool allowDebugConsole      = _configuration.GetValue<bool>("debug", true);
 
             Console.ForegroundColor = ConsoleColor.Green;
             Console.WriteLine("Starting UI on port " + listenPort.ToString());

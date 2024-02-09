@@ -12,24 +12,14 @@ namespace MIOS.net.Services
         {
             var files = new List<string>();
             var iniData = new IniData();
-
-            var r1 = new Regex(@"
-                (?<=[A-Z])(?=[A-Z][a-z]) |
-                 (?<=[^A-Z])(?=[A-Z]) |
-                 (?<=[A-Za-z])(?=[^A-Za-z])", RegexOptions.IgnorePatternWhitespace);
-
-
-
-
-
-
+            
             switch (InstanceType)
             {
                 case "Standalone":
-                default:           
-                    files = new List<string>{ 
-                        "opensim/bin/OpenSimDefaults.ini", 
-                        "opensim/bin/OpenSim.ini.example", 
+                default:
+                    files = new List<string>{
+                        "opensim/bin/OpenSimDefaults.ini",
+                        "opensim/bin/OpenSim.ini.example",
                         "opensim/bin/config-include/Standalone.ini",
                         "opensim/bin/config-include/StandaloneCommon.ini.example",
                         "opensim/bin/config-include/FlotsamCache.ini.example",
@@ -65,22 +55,24 @@ namespace MIOS.net.Services
 
             //Scan the entire iniData Object for keys and commented out keys and build a list of keys
             //that might have a list of pre-defined values
-            var keyEnumValues = new Dictionary<string, List<string>>();
+            var keyEnumValues = new Dictionary<string,Dictionary<string, List<string>>>();
             foreach (var section in iniData.Sections)
             {
+                var sectionName = section.SectionName.Replace("\"", "");
+                keyEnumValues.Add(sectionName, new Dictionary<string, List<string>>());
                 foreach (var key in section.Keys)
                 {
                     var keyValue = key.Value.Replace("\"", "").Split(';').First().Trim();
-                    if (!keyEnumValues.ContainsKey(key.KeyName)) keyEnumValues.Add(key.KeyName, new List<string>());
-                    keyEnumValues[key.KeyName].Add(keyValue);
+                    if (!keyEnumValues[sectionName].ContainsKey(key.KeyName)) keyEnumValues[sectionName].Add(key.KeyName, new List<string>());
+                    keyEnumValues[sectionName][key.KeyName].Add(keyValue);
                     var comments = key.Comments.Select(c => c.Replace("\"", "").Trim()).ToList().Where(c => c != "").ToList();
                     foreach (var comment in comments)
                     {
                         var keyExample = comment.Split('=').Select(s => s.Trim()).ToList();
                         if (keyExample.Count == 2)
                         {
-                            if (!keyEnumValues.ContainsKey(keyExample[0])) keyEnumValues.Add(keyExample[0], new List<string>());
-                            keyEnumValues[keyExample[0]].Add(keyExample[1]);
+                            if (!keyEnumValues[sectionName].ContainsKey(keyExample[0])) keyEnumValues[sectionName].Add(keyExample[0], new List<string>());
+                            keyEnumValues[sectionName][keyExample[0]].Add(keyExample[1]);
                         }
                     }
                 }
@@ -92,33 +84,17 @@ namespace MIOS.net.Services
             {
                 var sectionName = section.SectionName.Replace("\"", "");
                 var sectionDto = new SectionDto();
+                sectionDto.NiceName = MakeNiceName(sectionName);
                 foreach (var key in section.Keys)
                 {
                     //Key Value
                     var keyValue = key.Value.Replace("\"", "").Split(';').First().Trim();
 
                     //Key Type
-                    var keyType = "string";
-                    if (keyValue.ToLower() == "true" || keyValue.ToLower() == "false") keyType = "bool";                    
-                    else
-                    {
-                        if (keyValue.Contains('.') && float.TryParse(keyValue, out _)) keyType = "float";
-                        else
-                        {
-                            if (keyValue.Contains('.') && double.TryParse(keyValue, out _)) keyType = "double";
-                            else
-                            {
-                                if (int.TryParse(keyValue, out _)) keyType = "int";                            
-                            }
-                        }
-                    }
+                    var keyType = InferValueType(keyValue);
 
                     //Key Nice Name (for UI)
-                    var niceName = key.KeyName;
-                    var camelCase = SplitCamelCase(key.KeyName);
-                    var underScore = SplitUnderScore(key.KeyName);
-                    if(camelCase.Length > 1) niceName = string.Join(" ", camelCase);
-                    if(underScore.Length > 1) niceName = string.Join(" ", underScore.Select(s => s.ToUpper()[0] + s.Substring(1)));
+                    var niceName = MakeNiceName(key.KeyName);
 
                     //Key Comments
                     var comments = key.Comments
@@ -129,7 +105,7 @@ namespace MIOS.net.Services
 
                     //Key Enum
                     var keyEnum = new List<string>();
-                    if (keyEnumValues.ContainsKey(key.KeyName)) keyEnum = keyEnumValues[key.KeyName].Distinct().ToList();
+                    if (keyEnumValues[sectionName].ContainsKey(key.KeyName)) keyEnum = keyEnumValues[sectionName][key.KeyName].Distinct().ToList();
 
                     sectionDto.Keys.Add(key.KeyName, new KeyDto
                     {
@@ -142,6 +118,34 @@ namespace MIOS.net.Services
                 }
                 config.Sections.Add(sectionName, sectionDto);
             }
+
+            //add any keys we found in the comments but not in the keys
+            //as inactive keys to the right section
+            foreach (var section in config.Sections)
+            {
+                var sectionName = section.Key;
+                foreach (var key in keyEnumValues[sectionName])
+                {
+                    if (section.Value.Keys.ContainsKey(key.Key)) continue;
+
+                    //Key Type
+                    var keyType = InferValueType(key.Value[0]);
+
+                    //Key Nice Name (for UI)
+                    var niceName = MakeNiceName(key.Key);
+
+                    section.Value.Keys.Add(key.Key, new KeyDto
+                    {
+                        NiceName = niceName,
+                        Comments = new List<string>(),
+                        Value = key.Value.First(),
+                        Type = keyType,
+                        Enum = key.Value.Distinct().ToList(),
+                        Active = false
+                    });
+                }
+            }
+
             return config;
         }
 
@@ -151,6 +155,23 @@ namespace MIOS.net.Services
 
         private string[] SplitCamelCase(string source) {
             return Regex.Split(source, @"(?<!^)(?=[A-Z])");
+        }
+
+        private string InferValueType(string source) {
+            if (source.ToLower() == "true" || source.ToLower() == "false") return "bool";
+            if (source.Contains('.') && float.TryParse(source, out _)) return "float";
+            if (source.Contains('.') && double.TryParse(source, out _)) return "double";
+            if (int.TryParse(source, out _)) return "int";
+            return "string";
+        }
+
+        private string MakeNiceName(string source) {
+            var niceName = source;
+            var camelCase = SplitCamelCase(source);
+            var underScore = SplitUnderScore(source);
+            if(camelCase.Length > 1) niceName = string.Join(" ", camelCase);
+            if(underScore.Length > 1) niceName = string.Join(" ", underScore.Select(s => s.ToUpper()[0] + s.Substring(1)));
+            return Regex.Replace(niceName, @"(([A-Z]{1}) )", "$2").Trim();
         }
 
     }

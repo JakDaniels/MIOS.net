@@ -59,12 +59,47 @@ public class HomeController : Controller
         }
     }
 
-    public async Task<IActionResult> Config(string InstanceType = "Standalone")
+    public IActionResult Config(string InstanceType = "Standalone")
     {
         var iniData = _iniService.GetDefaultIniData(InstanceType);
         if (iniData == null) return View("Error");
         var json = JsonSerializer.Serialize(iniData, new JsonSerializerOptions { WriteIndented = true });
-        return View("Config", new ConfigViewModel { JsonConfig = json });
+        return View("Config", new ConfigViewModel { JsonConfig = json, Config = iniData });
+    }
+
+    public IActionResult GetConfig(string InstanceType = "Standalone")
+    {
+        var iniData = _iniService.GetDefaultIniData(InstanceType);
+        if (iniData == null) return Error();
+
+        var jsonData = new TreeViewDto
+        {
+            Text = "Configuration",
+            Html = "Configuration",
+            Children = new List<TreeViewDto>()
+        };
+
+        foreach(var section in iniData.Sections)
+        {
+            var sectionNode = new TreeViewDto
+            {
+                Text = section.Value.NiceName,
+                Html = section.Key,
+                Children = new List<TreeViewDto>()
+            };
+            foreach(var key in section.Value.Keys)
+            {
+                var keyNode = new TreeViewDto
+                {
+                    Text = key.Value.NiceName,
+                    Html = $"{key.Key} = {key.Value.Value}"
+                };
+                sectionNode.Children.Add(keyNode);
+            }
+            jsonData.Children.Add(sectionNode);
+        }
+        var json = new Dictionary<string, TreeViewDto> { { "Data", jsonData } };
+        return Json(json);
     }
 
     public IActionResult Privacy()

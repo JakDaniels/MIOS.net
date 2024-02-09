@@ -1,0 +1,30 @@
+/*!
+ * jtree CSS Library v1.0
+ *
+ * Includes jquery.js
+ * https://jquery.com/
+ *
+ * Author : Mayank Pandey
+ *
+ * Date: 2016-09-22T22:30Z
+ */
+
+.jtree_node {
+	list-style: none;
+}
+.jtree_node_open {
+    display: inline-block;
+    background-color:yellow;
+    background-image: url('icons.png');
+    background-position: -32px 0px;
+    width: 20px;
+    height: 20px;
+}
+.jtree_node_close {
+    display: inline-block;
+    background-color:yellow;
+    background-image: url('icons.png');
+    background-position: 0px 0px;
+    width: 20px;
+    height: 20px;
+}

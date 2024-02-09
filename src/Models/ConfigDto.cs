@@ -8,6 +8,7 @@ namespace MIOS.net.Models
 
     public class SectionDto
     {
+        public string NiceName { get; set; } = string.Empty;
         public List<string> Comments { get; set; } = new List<string>();
         public Dictionary<string, KeyDto> Keys { get; set; } = new Dictionary<string, KeyDto>();
     }
@@ -19,5 +20,6 @@ namespace MIOS.net.Models
         public string Value { get; set; } = string.Empty;
         public string Type { get; set; } = string.Empty;
         public List<string> Enum { get; set; } = new List<string>();
+        public bool Active { get; set; } = true;
     }
 }
